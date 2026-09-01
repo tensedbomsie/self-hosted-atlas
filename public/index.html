@@ -254,6 +254,11 @@
 
   .home-cols { display: flex; gap: 14px; width: 100%; max-width: 440px; align-items: stretch; }
   .home-cols .section-block { flex: 1; min-width: 0; max-width: none; }
+  .home-cols.activity-expanded { flex-direction: column; }
+  .home-cols.activity-expanded .activity-item .a-text { white-space: normal; overflow: visible; text-overflow: clip; }
+  .activity-toggle { display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .activity-toggle .chevron { color: var(--text-dim); font-size: 0.7rem; transition: transform 0.2s ease; }
+  .activity-expanded .activity-toggle .chevron { transform: rotate(180deg); }
 
   .activity-list { display: flex; flex-direction: column; gap: 14px; }
   .activity-item { display: flex; align-items: baseline; gap: 6px; font-size: 0.76rem; }
@@ -428,9 +433,12 @@
         <div class="storage-warn" id="storageWarn" style="display:none"></div>
       </div>
 
-      <div class="home-cols">
+      <div class="home-cols" id="homeCols">
         <div class="section-block panel">
-          <div class="section-title">Live Activity</div>
+          <div class="section-title activity-toggle" id="activityToggle">
+            <span>Live Activity</span>
+            <span class="chevron">▾</span>
+          </div>
           <div class="activity-list" id="activityList"></div>
         </div>
         <div class="section-block panel">
@@ -569,6 +577,7 @@
     const npPlayBtnEl = document.getElementById('npPlayBtn')
     const npNextBtnEl = document.getElementById('npNextBtn')
     const activityListEl = document.getElementById('activityList')
+    const homeColsEl = document.getElementById('homeCols')
     const homeQuickActionsEl = document.getElementById('homeQuickActions')
 
     const RING_CIRCUMFERENCE = 2 * Math.PI * 60
@@ -683,18 +692,30 @@
       }
     }
 
+    let lastEvents = []
+    let activityExpanded = false
+
     function renderActivity(events) {
+      lastEvents = events
       if (!events.length) {
         activityListEl.innerHTML = `<div class="activity-item"><span class="a-text" style="color:var(--text-dim)">No activity yet</span></div>`
         return
       }
-      activityListEl.innerHTML = events.slice(0, 8).map(e => {
+      const shown = activityExpanded ? events : events.slice(0, 8)
+      activityListEl.innerHTML = shown.map(e => {
         const t = new Date(e.time)
         const hh = String(t.getHours()).padStart(2, '0')
         const mm = String(t.getMinutes()).padStart(2, '0')
         return `<div class="activity-item"><span class="a-time">${hh}:${mm}</span><span class="a-text">${e.icon} ${e.text}</span></div>`
       }).join('')
     }
+
+    homeColsEl.addEventListener('click', (e) => {
+      if (!e.target.closest('#activityToggle')) return
+      activityExpanded = !activityExpanded
+      homeColsEl.classList.toggle('activity-expanded', activityExpanded)
+      renderActivity(lastEvents)
+    })
 
     function renderNowPlaying(np) {
       if (!np.playing) {
