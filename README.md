@@ -67,6 +67,16 @@ This gives you an HTTPS URL reachable from any device on your own tailnet — ne
 - CPU temperature on the Home dashboard needs [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor) running with its "Remote Web Server" option enabled (Options menu). Without it, the temperature card just won't appear — everything else works fine.
 - Brightness +/- needs [brightctrl](https://github.com/shahriyardx/brightctrl) (`winget install shahriyardx.brightctrl`) for external monitors over DDC/CI. Without it, those two buttons will just fail — everything else works fine.
 
+## Security
+
+Worth knowing before you run this, since it launches apps and controls a machine over the network:
+
+- **Auth is a single token**, generated once on first run and stored in `.token`. Every request needs it as a query param. It's enough to stop a random device on your Wi-Fi from poking at it, but it's not hardened against someone who's actually trying — no rate limiting, no rotation, no HTTPS by default.
+- **LAN-only by default.** ATLAS never makes an outbound call to anything, and there's no cloud component to leak through. The only way it's reachable from outside your network is if you explicitly set that up (see [Remote access](#remote-access-optional)).
+- **If you use Tailscale for remote access, do not turn on Funnel.** Funnel exposes the server to the public internet, and the token auth here isn't designed to survive that — see the warning in Remote access.
+- **File browsing is confined to a fixed set of folders** (Desktop/Downloads/Documents/Pictures) with path-traversal checks on every request — it can't be tricked into serving arbitrary files elsewhere on disk.
+- This is a personal tool built for a home network, not an internet-facing service. Treat it accordingly — don't port-forward it straight onto the open internet.
+
 ## Why not just use KDE Connect / X thing
 
 Stuff like KDE Connect already does pieces of this (clipboard, notifications), but it's tied to specific desktop environments and doesn't do app launching or a system dashboard. I wanted all of it in one place, running on Windows, without installing a bunch of separate tools — so I just built the thing.
@@ -75,8 +85,6 @@ Stuff like KDE Connect already does pieces of this (clipboard, notifications), b
 
 - **Server:** Node.js + Express, plain PowerShell scripts for Windows-specific actions (no extra services required beyond Node)
 - **Client:** vanilla HTML/CSS/JS, installable as a PWA — no build step
-- **Auth:** a random token generated on first run, required on every request
-- **Security:** path-traversal-safe file browsing (requests are confined to the configured root folders), no external network calls
 
 ## Known limitations
 
