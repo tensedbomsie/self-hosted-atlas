@@ -1,0 +1,11 @@
+{
+  "name": "ATLAS",
+  "short_name": "ATLAS",
+  "start_url": "https://desktop-dmnoupo.tail2e2849.ts.net/?token=aa55031319ded33a",
+  "display": "standalone",
+  "background_color": "#0f1014",
+  "theme_color": "#0f1014",
+  "icons": [
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

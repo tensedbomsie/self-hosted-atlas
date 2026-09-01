@@ -1,0 +1,1381 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>ATLAS</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="ATLAS" />
+<meta name="theme-color" content="#0f1014" />
+<style>
+  :root {
+    --bg: #0f1014;
+    --card: #1a1b23;
+    --accent: #34d399;
+    --accent-2: #6366f1;
+    --text: #f4f4f5;
+    --text-dim: #9ca3af;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    overflow: hidden;
+  }
+  .pager {
+    display: flex;
+    width: 100%;
+    height: 100vh;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .page {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 8px;
+    overflow-y: auto;
+  }
+  h1 { font-size: 1.3rem; margin: 8px 0 4px; }
+  .status { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 20px; min-height: 1.2em; text-align: center; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    width: 100%;
+    max-width: 420px;
+  }
+  button.tile {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+    padding: 22px 10px;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button.tile:active {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    transform: scale(0.96);
+  }
+  .icon { font-size: 2.2rem; }
+  .tile-wrap { position: relative; }
+  .tile-wrap .tile { width: 100%; height: 100%; }
+  .kill-btn {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(248,113,113,0.15);
+    border: 1px solid rgba(248,113,113,0.4);
+    color: #f87171;
+    font-size: 0.68rem;
+    line-height: 1;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    z-index: 2;
+  }
+  .kill-btn.visible { display: flex; }
+  .kill-btn:active { background: rgba(248,113,113,0.3); }
+  .tile { position: relative; }
+  .status-dot {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    box-shadow: none;
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+  .status-dot.online {
+    background: #34d399;
+    box-shadow: 0 0 6px 1px rgba(52,211,153,0.7);
+  }
+  .error { color: #f87171; }
+  .dots {
+    position: fixed;
+    bottom: 14px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: background 0.2s; }
+  .dot.active { background: var(--accent); }
+  .hint { color: var(--text-dim); font-size: 0.75rem; margin-top: 4px; }
+  .bar-track { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.4s; }
+  .bar-fill.warn { background: #fbbf24; }
+  .bar-fill.crit { background: #f87171; }
+  .control-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    width: 100%;
+    max-width: 420px;
+  }
+  .control-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .scenes-row { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 420px; }
+  .scene-btn { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 14px 18px; color: var(--text); font-size: 0.95rem; font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .scene-btn .icon { font-size: 1.4rem; }
+  .scene-btn:active { background: rgba(255,255,255,0.08); }
+  .scene-btn:disabled { opacity: 0.6; }
+  .control-section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.12);
+  }
+  .upload-btn {
+    width: 100%;
+    max-width: 420px;
+    background: var(--card);
+    border: 1px dashed rgba(255,255,255,0.18);
+    border-radius: 18px;
+    padding: 28px 10px;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95rem;
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
+  }
+  .upload-btn:active { background: rgba(255,255,255,0.06); }
+  .upload-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-width: 420px;
+    margin-top: 18px;
+  }
+  .upload-item {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .upload-item .name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .page > * { flex-shrink: 0; }
+  .home-page { gap: 22px; padding-bottom: 24px; }
+  .home-header { width: 100%; max-width: 440px; text-align: left; }
+  .greeting { font-size: 1.25rem; font-weight: 600; }
+  .pc-status { color: var(--text-dim); font-size: 0.85rem; margin-top: 2px; }
+  .online-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 0.72rem; color: var(--text-dim); letter-spacing: 0.04em; }
+  .online-row .sep { opacity: 0.4; }
+  .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+
+  .quick-nav { display: flex; gap: 8px; width: 100%; max-width: 440px; overflow-x: auto; padding-bottom: 2px; }
+  .quick-nav-btn { flex: 0 0 auto; background: var(--card); border: 1px solid rgba(255,255,255,0.08); border-radius: 999px; padding: 8px 14px; color: var(--text-dim); font-size: 0.78rem; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+  .quick-nav-btn:active { background: rgba(255,255,255,0.06); }
+
+  .health-card { width: 100%; max-width: 440px; background: var(--card); border: 1px solid rgba(255,255,255,0.08); border-radius: 22px; padding: 26px 20px; display: flex; flex-direction: column; gap: 22px; }
+  .health-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .health-metric { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .health-metric:last-child { align-items: flex-end; text-align: right; }
+  .metric-label { color: var(--text-dim); font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; }
+  .metric-value { font-size: 1.6rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .metric-sub { color: var(--text-dim); font-size: 0.75rem; }
+  .sparkline { width: 76px; height: 22px; }
+  .sparkline polyline { fill: none; stroke-width: 2; }
+
+  .health-ring-wrap { position: relative; width: 132px; height: 132px; flex: 0 0 auto; }
+  .health-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-track { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 10; }
+  .ring-fill { fill: none; stroke: var(--accent); stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 0.5s, stroke 0.5s; }
+  .ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .ring-score { font-size: 1.9rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .ring-label { font-size: 0.65rem; letter-spacing: 0.08em; color: var(--accent); margin-top: 3px; }
+  .ring-fill.warn { stroke: #fbbf24; }
+  .ring-fill.crit { stroke: #f87171; }
+  .ring-label.warn { color: #fbbf24; }
+  .ring-label.crit { color: #f87171; }
+
+  .ram-row { display: flex; align-items: center; gap: 10px; }
+  .ram-row .metric-label { flex: 0 0 auto; }
+  .ram-row .bar-track { flex: 1; }
+  .ram-row .metric-sub { flex: 0 0 auto; }
+
+  .section-block { width: 100%; max-width: 440px; }
+  .section-title { color: var(--text-dim); font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 14px; }
+  .section-block.panel { background: var(--card); border: 1px solid rgba(255,255,255,0.08); border-radius: 22px; padding: 20px 18px; }
+
+  .storage-item { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .storage-item:last-of-type { margin-bottom: 0; }
+  .storage-item .drive-label { flex: 0 0 22px; color: var(--text-dim); font-size: 0.8rem; }
+  .storage-item .bar-track { flex: 1; }
+  .storage-item .drive-pct { flex: 0 0 auto; font-size: 0.78rem; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 32px; text-align: right; }
+  .storage-item .drive-pct.warn { color: #fbbf24; }
+  .storage-item .drive-pct.crit { color: #f87171; }
+  .storage-item .drive-free { flex: 0 0 auto; font-size: 0.72rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  .storage-warn { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.25); border-radius: 14px; padding: 12px 16px; font-size: 0.78rem; color: #f87171; margin-top: 16px; }
+
+  .home-cols { display: flex; gap: 14px; width: 100%; max-width: 440px; align-items: stretch; }
+  .home-cols .section-block { flex: 1; min-width: 0; max-width: none; }
+
+  .activity-list { display: flex; flex-direction: column; gap: 14px; }
+  .activity-item { display: flex; align-items: baseline; gap: 6px; font-size: 0.76rem; }
+  .activity-item .a-time { color: var(--text-dim); font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+  .activity-item .a-text { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  #homeQuickActions.grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  #homeQuickActions button.tile { padding: 10px 6px; font-size: 0.72rem; gap: 4px; border-radius: 14px; }
+  #homeQuickActions .icon { font-size: 1.15rem; }
+
+  .clip-panel { margin-top: 22px; display: flex; flex-direction: column; gap: 10px; }
+  .clip-textarea {
+    width: 100%;
+    min-height: 90px;
+    background: var(--bg);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.9rem;
+    resize: vertical;
+    outline: none;
+  }
+  .clip-textarea:focus { border-color: var(--accent); }
+  .action-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #0f1014;
+    border: none;
+    border-radius: 14px;
+    padding: 13px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .action-btn:active { opacity: 0.85; }
+  .action-btn.secondary { background: var(--bg); color: var(--text); border: 1px solid rgba(255,255,255,0.1); font-weight: 500; }
+  .clip-result { display: flex; flex-direction: column; gap: 10px; margin-top: 2px; }
+  .clip-result-text {
+    background: var(--bg);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 12px 14px;
+    font-size: 0.85rem;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+
+  .file-roots { display: flex; gap: 8px; width: 100%; max-width: 440px; overflow-x: auto; margin-bottom: 14px; }
+  .file-root-btn { flex: 0 0 auto; background: var(--card); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 10px 14px; color: var(--text-dim); font-size: 0.78rem; white-space: nowrap; display: flex; align-items: center; gap: 6px; -webkit-tap-highlight-color: transparent; }
+  .file-root-btn.active { background: var(--accent); color: #0f1014; border-color: var(--accent); }
+
+  .file-breadcrumb { width: 100%; max-width: 440px; display: flex; align-items: center; gap: 6px; color: var(--text-dim); font-size: 0.8rem; margin-bottom: 12px; flex-wrap: wrap; }
+  .file-breadcrumb .crumb { cursor: pointer; }
+  .file-breadcrumb .crumb:last-child { color: var(--text); }
+  .file-breadcrumb .sep { opacity: 0.4; }
+
+  .now-playing-card { display: flex; flex-direction: column; gap: 14px; }
+  .np-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .np-title { font-size: 0.92rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .np-artist { font-size: 0.78rem; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .np-controls { display: flex; gap: 10px; }
+  .np-btn { flex: 1; background: var(--bg); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 12px; color: var(--text); font-size: 1.15rem; font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .np-btn.primary { background: var(--accent); color: #0f1014; border-color: var(--accent); }
+  .np-btn:active { opacity: 0.8; }
+
+  .file-list { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 8px; }
+  .file-row { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 12px 14px; text-decoration: none; color: var(--text); -webkit-tap-highlight-color: transparent; }
+  .file-row:active { background: rgba(255,255,255,0.06); }
+  .file-row .f-icon { font-size: 1.2rem; flex: 0 0 auto; }
+  .file-row .f-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.86rem; }
+  .file-row .f-meta { flex: 0 0 auto; font-size: 0.72rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
+  .settings-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .settings-item { display: flex; align-items: center; gap: 10px; background: var(--bg); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 10px 12px; }
+  .settings-item .icon { font-size: 1.1rem; flex: 0 0 auto; }
+  .settings-item .label { flex: 1; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .settings-item button { background: none; border: none; color: var(--text-dim); font-size: 0.78rem; cursor: pointer; padding: 4px 8px; font-family: inherit; }
+  .settings-item button:active { color: var(--text); }
+  .settings-empty { color: var(--text-dim); font-size: 0.8rem; padding: 8px 2px 12px; }
+  .settings-form { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); }
+  .settings-form input {
+    background: var(--bg);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 11px 13px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.85rem;
+    outline: none;
+  }
+  .settings-form input:focus { border-color: var(--accent); }
+  .settings-form label.chk { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text); padding: 6px 2px; }
+  .settings-form label.chk input { width: auto; padding: 0; }
+</style>
+</head>
+<body>
+  <div class="pager" id="pager">
+    <section class="page home-page">
+      <div class="home-header">
+        <div class="greeting" id="greeting">Hi there</div>
+        <div class="pc-status" id="pcStatusMsg">Loading system status...</div>
+        <div class="online-row">
+          <span class="live-dot"></span>
+          <span id="onlineLabel">ONLINE</span>
+          <span class="sep">•</span>
+          <span>UPTIME <span id="homeUptime">--</span></span>
+        </div>
+      </div>
+
+      <div class="quick-nav">
+        <button class="quick-nav-btn" data-jump="1">🎮 Deck</button>
+        <button class="quick-nav-btn" data-jump="2">🖥️ Controls</button>
+        <button class="quick-nav-btn" data-jump="3">📤 Send</button>
+        <button class="quick-nav-btn" data-jump="4">📁 Files</button>
+      </div>
+
+      <div class="health-card">
+        <div class="health-row">
+          <div class="health-metric">
+            <div class="metric-label">CPU</div>
+            <div class="metric-value" id="homeCpuVal">--</div>
+            <svg class="sparkline" id="cpuSpark" viewBox="0 0 100 24" preserveAspectRatio="none"><polyline id="cpuSparkLine" points=""></polyline></svg>
+            <div class="metric-sub" id="homeCpuTemp"></div>
+          </div>
+          <div class="health-ring-wrap">
+            <svg class="health-ring" viewBox="0 0 140 140">
+              <circle class="ring-track" cx="70" cy="70" r="60"></circle>
+              <circle class="ring-fill" id="ringFill" cx="70" cy="70" r="60" stroke-dasharray="377" stroke-dashoffset="377"></circle>
+            </svg>
+            <div class="ring-center">
+              <div class="ring-score" id="ringScore">--</div>
+              <div class="ring-label" id="ringLabel">...</div>
+            </div>
+          </div>
+          <div class="health-metric">
+            <div class="metric-label">GPU</div>
+            <div class="metric-value" id="homeGpuVal">--</div>
+            <svg class="sparkline" id="gpuSpark" viewBox="0 0 100 24" preserveAspectRatio="none"><polyline id="gpuSparkLine" points=""></polyline></svg>
+            <div class="metric-sub" id="homeGpuTemp"></div>
+          </div>
+        </div>
+        <div class="ram-row">
+          <div class="metric-label">RAM</div>
+          <div class="bar-track"><div class="bar-fill" id="homeRamBar" style="width:0%"></div></div>
+          <div class="metric-sub" id="homeRamVal"></div>
+        </div>
+      </div>
+
+      <div class="section-block panel now-playing-card" id="nowPlayingCard" style="display:none">
+        <div class="section-title">Now Playing</div>
+        <div class="np-info">
+          <div class="np-title" id="npTitle"></div>
+          <div class="np-artist" id="npArtist"></div>
+        </div>
+        <div class="np-controls">
+          <button class="np-btn" id="npPrevBtn">⏮</button>
+          <button class="np-btn primary" id="npPlayBtn">⏯</button>
+          <button class="np-btn" id="npNextBtn">⏭</button>
+        </div>
+      </div>
+
+      <div class="section-block panel">
+        <div class="section-title">Storage</div>
+        <div id="homeStorage"></div>
+        <div class="storage-warn" id="storageWarn" style="display:none"></div>
+      </div>
+
+      <div class="home-cols">
+        <div class="section-block panel">
+          <div class="section-title">Live Activity</div>
+          <div class="activity-list" id="activityList"></div>
+        </div>
+        <div class="section-block panel">
+          <div class="section-title">Quick Actions</div>
+          <div class="grid" id="homeQuickActions"></div>
+        </div>
+      </div>
+    </section>
+    <section class="page">
+      <h1>🌍 ATLAS</h1>
+      <div class="status" id="status">กำลังโหลด...</div>
+      <div class="grid" id="grid"></div>
+      <div class="hint">ปัดขวาไปหน้า Controls →</div>
+    </section>
+    <section class="page">
+      <h1>🖥️ Controls</h1>
+      <div class="status" id="controlStatus"></div>
+      <div class="control-sections" id="scenesSection">
+        <div class="control-section-title">Scenes</div>
+        <div class="scenes-row" id="scenesRow"></div>
+      </div>
+      <div class="control-sections" id="controlGrid"></div>
+    </section>
+    <section class="page">
+      <h1>📤 Send</h1>
+      <div class="status" id="sendStatus"></div>
+      <label class="upload-btn" for="fileInput">
+        <span class="icon">📁</span>
+        <span>เลือกรูป/ไฟล์เพื่อส่งเข้าคอม</span>
+      </label>
+      <input type="file" id="fileInput" accept="image/*,video/*" hidden />
+      <div class="hint" id="uploadHint">ไฟล์จะไปอยู่ที่โฟลเดอร์ "ATLAS Uploads" บน Desktop</div>
+      <div class="upload-list" id="uploadList"></div>
+
+      <div class="section-block panel clip-panel">
+        <div class="section-title">Clipboard</div>
+        <textarea class="clip-textarea" id="clipInput" placeholder="พิมพ์หรือวางข้อความที่นี่..."></textarea>
+        <button class="action-btn" id="clipSendBtn">ส่งไป PC</button>
+        <button class="action-btn secondary" id="clipPullBtn">ดึงจาก PC</button>
+        <div class="clip-result" id="clipResult" style="display:none">
+          <div class="clip-result-text" id="clipResultText"></div>
+          <button class="action-btn secondary" id="clipCopyBtn">คัดลอกไปมือถือ</button>
+        </div>
+      </div>
+    </section>
+    <section class="page">
+      <h1>📁 Files</h1>
+      <div class="status" id="filesStatus"></div>
+      <div class="file-roots" id="fileRoots"></div>
+      <div class="file-breadcrumb" id="fileBreadcrumb"></div>
+      <div class="file-list" id="fileList"></div>
+    </section>
+    <section class="page">
+      <h1>⚙️ Settings</h1>
+      <div class="status" id="settingsStatus"></div>
+
+      <div class="section-block panel">
+        <div class="section-title">Apps</div>
+        <div class="settings-list" id="appsList"></div>
+        <button class="action-btn secondary" id="addAppBtn">+ Add app</button>
+        <div class="settings-form" id="appForm" style="display:none">
+          <input type="text" id="appLabel" placeholder="Name (e.g. Discord)" />
+          <input type="text" id="appIcon" placeholder="Icon emoji (optional, e.g. 🎧)" />
+          <input type="text" id="appPath" placeholder="Full path to .exe or .lnk shortcut" />
+          <input type="text" id="appProcess" placeholder="Process name for status dot (optional)" />
+          <div class="hint">Tip: right-click a Start Menu shortcut → Properties to copy its target path.</div>
+          <button class="action-btn" id="appSaveBtn">Save</button>
+          <button class="action-btn secondary" id="appCancelBtn">Cancel</button>
+        </div>
+      </div>
+
+      <div class="section-block panel">
+        <div class="section-title">Scenes</div>
+        <div class="settings-list" id="scenesList"></div>
+        <button class="action-btn secondary" id="addSceneBtn">+ Add scene</button>
+        <div class="settings-form" id="sceneForm" style="display:none">
+          <input type="text" id="sceneLabel" placeholder="Name (e.g. Gaming Mode)" />
+          <input type="text" id="sceneIcon" placeholder="Icon emoji (optional, e.g. 🎮)" />
+          <div class="hint">Apps to open:</div>
+          <div id="sceneAppChecks"></div>
+          <div class="hint">Controls to trigger:</div>
+          <div id="sceneControlChecks"></div>
+          <button class="action-btn" id="sceneSaveBtn">Save</button>
+          <button class="action-btn secondary" id="sceneCancelBtn">Cancel</button>
+        </div>
+      </div>
+    </section>
+  </div>
+  <div class="dots">
+    <span class="dot active" data-page="0"></span>
+    <span class="dot" data-page="1"></span>
+    <span class="dot" data-page="2"></span>
+    <span class="dot" data-page="3"></span>
+    <span class="dot" data-page="4"></span>
+    <span class="dot" data-page="5"></span>
+    <span class="dot" data-page="4"></span>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search)
+    const urlToken = params.get('token')
+    if (urlToken) localStorage.setItem('shortcutDeckToken', urlToken)
+    const token = urlToken || localStorage.getItem('shortcutDeckToken') || ''
+    const statusEl = document.getElementById('status')
+    const gridEl = document.getElementById('grid')
+    const controlStatusEl = document.getElementById('controlStatus')
+    const controlGridEl = document.getElementById('controlGrid')
+    const sendStatusEl = document.getElementById('sendStatus')
+    const uploadListEl = document.getElementById('uploadList')
+    const fileInputEl = document.getElementById('fileInput')
+    const pagerEl = document.getElementById('pager')
+    const dots = document.querySelectorAll('.dot')
+    let uploadsTimer = null
+    let homeTimer = null
+
+    const greetingEl = document.getElementById('greeting')
+    const pcStatusMsgEl = document.getElementById('pcStatusMsg')
+    const homeUptimeEl = document.getElementById('homeUptime')
+    const homeCpuValEl = document.getElementById('homeCpuVal')
+    const homeCpuTempEl = document.getElementById('homeCpuTemp')
+    const homeGpuValEl = document.getElementById('homeGpuVal')
+    const homeGpuTempEl = document.getElementById('homeGpuTemp')
+    const cpuSparkLineEl = document.getElementById('cpuSparkLine')
+    const gpuSparkLineEl = document.getElementById('gpuSparkLine')
+    const ringFillEl = document.getElementById('ringFill')
+    const ringScoreEl = document.getElementById('ringScore')
+    const ringLabelEl = document.getElementById('ringLabel')
+    const homeRamBarEl = document.getElementById('homeRamBar')
+    const homeRamValEl = document.getElementById('homeRamVal')
+    const homeStorageEl = document.getElementById('homeStorage')
+    const storageWarnEl = document.getElementById('storageWarn')
+    const nowPlayingCardEl = document.getElementById('nowPlayingCard')
+    const npTitleEl = document.getElementById('npTitle')
+    const npArtistEl = document.getElementById('npArtist')
+    const npPrevBtnEl = document.getElementById('npPrevBtn')
+    const npPlayBtnEl = document.getElementById('npPlayBtn')
+    const npNextBtnEl = document.getElementById('npNextBtn')
+    const activityListEl = document.getElementById('activityList')
+    const homeQuickActionsEl = document.getElementById('homeQuickActions')
+
+    const RING_CIRCUMFERENCE = 2 * Math.PI * 60
+    let cpuHistory = []
+    let gpuHistory = []
+
+    const HOME_QUICK_ACTIONS = [
+      { id: 'sleep', label: 'Sleep', icon: '💤' },
+      { id: 'screen-off', label: 'Screen Off', icon: '🖥️' },
+      { id: 'mute', label: 'Mute', icon: '🔇' },
+      { id: 'brightness-up', label: 'Bright +', icon: '🔆' },
+      { id: 'brightness-down', label: 'Bright -', icon: '🔅' },
+      { id: 'more', label: 'More', icon: '⊞' },
+    ]
+
+    function renderHomeQuickActions() {
+      homeQuickActionsEl.innerHTML = ''
+      for (const a of HOME_QUICK_ACTIONS) {
+        const btn = document.createElement('button')
+        btn.className = 'tile'
+        btn.innerHTML = `<span class="icon">${a.icon}</span><span>${a.label}</span>`
+        btn.onclick = () => a.id === 'more' ? jumpTo(2) : control(a.id)
+        homeQuickActionsEl.appendChild(btn)
+      }
+    }
+
+    function jumpTo(page) {
+      pagerEl.scrollTo({ left: pagerEl.clientWidth * page, behavior: 'smooth' })
+    }
+
+    document.querySelectorAll('.quick-nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => jumpTo(Number(btn.dataset.jump)))
+    })
+
+    function greetingText() {
+      const h = new Date().getHours()
+      const part = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'
+      return part
+    }
+
+    function sparkPoints(history) {
+      if (history.length < 2) return ''
+      return history.map((v, i) => {
+        const x = (i / (history.length - 1)) * 100
+        const y = 22 - (Math.min(100, Math.max(0, v)) / 100) * 20
+        return `${x.toFixed(1)},${y.toFixed(1)}`
+      }).join(' ')
+    }
+
+    function computeHealth(d) {
+      let worst = d.cpu.usagePct
+      if (d.cpu.tempC != null) worst = Math.max(worst, d.cpu.tempC)
+      if (d.gpu) worst = Math.max(worst, d.gpu.usagePct, d.gpu.tempC)
+      worst = Math.max(worst, (d.ram.usedGB / d.ram.totalGB) * 100)
+      const score = Math.max(0, Math.round(100 - worst))
+      if (worst >= 95) return { score, label: 'CRITICAL', cls: 'crit' }
+      if (worst >= 80) return { score, label: 'ATTENTION', cls: 'warn' }
+      return { score, label: 'HEALTHY', cls: '' }
+    }
+
+    function renderHome(d) {
+      homeUptimeEl.textContent = fmtUptime(d.uptimeSeconds)
+
+      cpuHistory.push(d.cpu.usagePct)
+      if (cpuHistory.length > 20) cpuHistory.shift()
+      homeCpuValEl.textContent = `${d.cpu.usagePct}%`
+      homeCpuTempEl.textContent = d.cpu.tempC != null ? `${d.cpu.tempC.toFixed(0)}°C` : ''
+      cpuSparkLineEl.setAttribute('points', sparkPoints(cpuHistory))
+      cpuSparkLineEl.style.stroke = 'var(--accent)'
+
+      if (d.gpu) {
+        gpuHistory.push(d.gpu.usagePct)
+        if (gpuHistory.length > 20) gpuHistory.shift()
+        homeGpuValEl.textContent = `${d.gpu.usagePct}%`
+        homeGpuTempEl.textContent = `${d.gpu.tempC}°C`
+        gpuSparkLineEl.setAttribute('points', sparkPoints(gpuHistory))
+        gpuSparkLineEl.style.stroke = 'var(--accent-2)'
+      }
+
+      const ramPct = (d.ram.usedGB / d.ram.totalGB) * 100
+      homeRamBarEl.style.width = `${Math.min(100, ramPct)}%`
+      homeRamBarEl.className = `bar-fill ${levelClass(ramPct, 80, 95)}`
+      homeRamValEl.textContent = `${d.ram.usedGB} / ${d.ram.totalGB} GB`
+
+      const health = computeHealth(d)
+      const offset = RING_CIRCUMFERENCE * (1 - health.score / 100)
+      ringFillEl.setAttribute('stroke-dashoffset', offset.toFixed(1))
+      ringFillEl.className = `ring-fill ${health.cls}`
+      ringScoreEl.textContent = health.score
+      ringLabelEl.textContent = health.label
+      ringLabelEl.className = `ring-label ${health.cls}`
+      pcStatusMsgEl.textContent = health.cls === '' ? 'Your PC is running normally.'
+        : health.cls === 'warn' ? 'Something needs a look — check the details below.'
+        : 'Something needs attention now — check the details below.'
+
+      homeStorageEl.innerHTML = ''
+      let worstDisk = null
+      for (const disk of d.disks) {
+        const usedPct = (1 - disk.freeGB / disk.totalGB) * 100
+        const cls = levelClass(usedPct, 85, 95)
+        if (cls && (!worstDisk || usedPct > worstDisk.usedPct)) worstDisk = { ...disk, usedPct }
+        const row = document.createElement('div')
+        row.className = 'storage-item'
+        row.innerHTML = `<span class="drive-label">${disk.drive}</span><div class="bar-track"><div class="bar-fill ${cls}" style="width:${Math.min(100, usedPct)}%"></div></div><span class="drive-pct ${cls}">${Math.round(usedPct)}%</span><span class="drive-free">${disk.freeGB} GB free</span>`
+        homeStorageEl.appendChild(row)
+      }
+      if (worstDisk) {
+        storageWarnEl.style.display = 'flex'
+        storageWarnEl.innerHTML = `<span>⚠️ ${worstDisk.drive} Drive is almost full — ${worstDisk.freeGB} GB remaining</span>`
+      } else {
+        storageWarnEl.style.display = 'none'
+      }
+    }
+
+    function renderActivity(events) {
+      if (!events.length) {
+        activityListEl.innerHTML = `<div class="activity-item"><span class="a-text" style="color:var(--text-dim)">No activity yet</span></div>`
+        return
+      }
+      activityListEl.innerHTML = events.slice(0, 8).map(e => {
+        const t = new Date(e.time)
+        const hh = String(t.getHours()).padStart(2, '0')
+        const mm = String(t.getMinutes()).padStart(2, '0')
+        return `<div class="activity-item"><span class="a-time">${hh}:${mm}</span><span class="a-text">${e.icon} ${e.text}</span></div>`
+      }).join('')
+    }
+
+    function renderNowPlaying(np) {
+      if (!np.playing) {
+        nowPlayingCardEl.style.display = 'none'
+        return
+      }
+      nowPlayingCardEl.style.display = 'flex'
+      npTitleEl.textContent = np.title || '(no title)'
+      npArtistEl.textContent = np.artist || ''
+      npPlayBtnEl.textContent = np.status === 'Playing' ? '⏸' : '▶'
+    }
+
+    async function mediaControl(action) {
+      try {
+        await fetch(`/api/mediacontrol/${action}?token=${token}`, { method: 'POST' })
+        setTimeout(loadNowPlaying, 300)
+      } catch (e) {}
+    }
+
+    async function loadNowPlaying() {
+      try {
+        const res = await fetch(`/api/nowplaying?token=${token}`)
+        if (!res.ok) return
+        renderNowPlaying(await res.json())
+      } catch (e) {}
+    }
+
+    npPrevBtnEl.addEventListener('click', () => mediaControl('prev'))
+    npPlayBtnEl.addEventListener('click', () => mediaControl('playpause'))
+    npNextBtnEl.addEventListener('click', () => mediaControl('next'))
+
+    async function loadHome() {
+      greetingEl.textContent = greetingText()
+      try {
+        const [statusRes, eventsRes] = await Promise.all([
+          fetch(`/api/status?token=${token}`),
+          fetch(`/api/events?token=${token}`),
+        ])
+        if (statusRes.ok) renderHome(await statusRes.json())
+        if (eventsRes.ok) renderActivity(await eventsRes.json())
+        loadNowPlaying()
+      } catch (e) {}
+    }
+
+    function startHomePolling() {
+      loadHome()
+      if (homeTimer) clearInterval(homeTimer)
+      homeTimer = setInterval(loadHome, 4000)
+    }
+
+    function stopHomePolling() {
+      if (homeTimer) clearInterval(homeTimer)
+      homeTimer = null
+    }
+
+    const CONTROLS = [
+      { id: 'sleep', label: 'Sleep', icon: '💤', section: 'Device' },
+      { id: 'screen-off', label: 'Screen Off', icon: '🖥️', section: 'Monitors' },
+      { id: 'brightness-up', label: 'Bright +', icon: '🔆', section: 'Monitors' },
+      { id: 'brightness-down', label: 'Bright -', icon: '🔅', section: 'Monitors' },
+      { id: 'volume-up', label: 'Vol +', icon: '🔊', section: 'Audio' },
+      { id: 'volume-down', label: 'Vol -', icon: '🔉', section: 'Audio' },
+      { id: 'mute', label: 'Mute', icon: '🔇', section: 'Audio' },
+    ]
+
+    function renderControls() {
+      controlGridEl.innerHTML = ''
+      const sections = [...new Set(CONTROLS.map(c => c.section))]
+      for (const section of sections) {
+        const wrap = document.createElement('div')
+        const title = document.createElement('div')
+        title.className = 'control-section-title'
+        title.textContent = section
+        wrap.appendChild(title)
+
+        const grid = document.createElement('div')
+        grid.className = 'grid'
+        for (const c of CONTROLS.filter(c => c.section === section)) {
+          const btn = document.createElement('button')
+          btn.className = 'tile'
+          btn.innerHTML = `<span class="icon">${c.icon}</span><span>${c.label}</span>`
+          btn.onclick = () => control(c.id)
+          grid.appendChild(btn)
+        }
+        wrap.appendChild(grid)
+        controlGridEl.appendChild(wrap)
+      }
+    }
+
+    async function load() {
+      try {
+        const res = await fetch(`/api/apps?token=${token}`)
+        if (!res.ok) throw new Error('token ไม่ถูกต้อง')
+        const apps = await res.json()
+        gridEl.innerHTML = ''
+        for (const app of apps) {
+          const wrap = document.createElement('div')
+          wrap.className = 'tile-wrap'
+          const btn = document.createElement('button')
+          btn.className = 'tile'
+          btn.innerHTML = `<span class="status-dot" data-app-id="${app.id}"></span><span class="icon">${app.icon}</span><span>${app.label}</span>`
+          btn.onclick = () => run(app.id)
+          wrap.appendChild(btn)
+          if (app.id !== 'explorer') {
+            const killBtn = document.createElement('button')
+            killBtn.className = 'kill-btn'
+            killBtn.textContent = '✕'
+            killBtn.dataset.appId = app.id
+            killBtn.onclick = (e) => { e.stopPropagation(); killApp(app.id, app.label) }
+            wrap.appendChild(killBtn)
+          }
+          gridEl.appendChild(wrap)
+        }
+        statusEl.textContent = ''
+        loadAppStatus()
+      } catch (e) {
+        statusEl.textContent = e.message
+        statusEl.className = 'status error'
+      }
+    }
+
+    let appStatusTimer = null
+
+    async function loadAppStatus() {
+      try {
+        const res = await fetch(`/api/apps/status?token=${token}`)
+        if (!res.ok) return
+        const statusMap = await res.json()
+        for (const dot of gridEl.querySelectorAll('.status-dot')) {
+          const online = !!statusMap[dot.dataset.appId]
+          dot.classList.toggle('online', online)
+          const killBtn = gridEl.querySelector(`.kill-btn[data-app-id="${dot.dataset.appId}"]`)
+          if (killBtn) killBtn.classList.toggle('visible', online)
+        }
+      } catch (e) {}
+    }
+
+    async function killApp(id, label) {
+      if (!confirm(`ปิด ${label} เลยมั้ย?`)) return
+      statusEl.textContent = ''
+      statusEl.className = 'status'
+      try {
+        const res = await fetch(`/api/kill/${id}?token=${token}`, { method: 'POST' })
+        if (!res.ok) throw new Error((await res.json()).error || 'ปิดไม่สำเร็จ')
+        statusEl.textContent = `✓ ปิด ${label} แล้ว`
+        loadAppStatus()
+      } catch (e) {
+        statusEl.textContent = e.message
+        statusEl.className = 'status error'
+      }
+    }
+
+    function startAppStatusPolling() {
+      loadAppStatus()
+      if (appStatusTimer) clearInterval(appStatusTimer)
+      appStatusTimer = setInterval(loadAppStatus, 4000)
+    }
+
+    function stopAppStatusPolling() {
+      if (appStatusTimer) clearInterval(appStatusTimer)
+      appStatusTimer = null
+    }
+
+    async function run(id) {
+      statusEl.textContent = ''
+      try {
+        const res = await fetch(`/api/run/${id}?token=${token}`, { method: 'POST' })
+        if (!res.ok) throw new Error((await res.json()).error || 'สั่งงานไม่สำเร็จ')
+        statusEl.textContent = `✓ เปิดแล้ว`
+        statusEl.className = 'status'
+      } catch (e) {
+        statusEl.textContent = e.message
+        statusEl.className = 'status error'
+      }
+    }
+
+    const scenesRowEl = document.getElementById('scenesRow')
+
+    async function runScene(id, btn) {
+      const original = btn.innerHTML
+      btn.disabled = true
+      btn.innerHTML = `<span class="icon">⏳</span><span>Running...</span>`
+      controlStatusEl.textContent = ''
+      try {
+        const res = await fetch(`/api/scenes/${id}/run?token=${token}`, { method: 'POST' })
+        if (!res.ok) throw new Error((await res.json()).error || 'รันไม่สำเร็จ')
+        controlStatusEl.textContent = `✓ เรียบร้อย`
+        controlStatusEl.className = 'status'
+      } catch (e) {
+        controlStatusEl.textContent = e.message
+        controlStatusEl.className = 'status error'
+      } finally {
+        btn.disabled = false
+        btn.innerHTML = original
+      }
+    }
+
+    async function loadScenes() {
+      try {
+        const res = await fetch(`/api/scenes?token=${token}`)
+        if (!res.ok) return
+        const scenes = await res.json()
+        scenesRowEl.innerHTML = ''
+        for (const s of scenes) {
+          const btn = document.createElement('button')
+          btn.className = 'scene-btn'
+          btn.innerHTML = `<span class="icon">${s.icon}</span><span>${s.label}</span>`
+          btn.onclick = () => runScene(s.id, btn)
+          scenesRowEl.appendChild(btn)
+        }
+      } catch (e) {}
+    }
+
+    async function control(id) {
+      controlStatusEl.textContent = ''
+      try {
+        const res = await fetch(`/api/control/${id}?token=${token}`, { method: 'POST' })
+        if (!res.ok) throw new Error((await res.json()).error || 'สั่งงานไม่สำเร็จ')
+        controlStatusEl.textContent = `✓ สั่งแล้ว`
+        controlStatusEl.className = 'status'
+      } catch (e) {
+        controlStatusEl.textContent = e.message
+        controlStatusEl.className = 'status error'
+      }
+    }
+
+    function fmtUptime(sec) {
+      const d = Math.floor(sec / 86400)
+      const h = Math.floor((sec % 86400) / 3600)
+      const m = Math.floor((sec % 3600) / 60)
+      if (d > 0) return `${d}d ${h}h ${m}m`
+      if (h > 0) return `${h}h ${m}m`
+      return `${m}m`
+    }
+
+    function levelClass(val, warnAt, critAt) {
+      if (val >= critAt) return 'crit'
+      if (val >= warnAt) return 'warn'
+      return ''
+    }
+
+    function renderUploads(names) {
+      if (!names.length) {
+        uploadListEl.innerHTML = ''
+        return
+      }
+      uploadListEl.innerHTML = names.map(n =>
+        `<div class="upload-item"><span>📄</span><span class="name">${n}</span></div>`
+      ).join('')
+    }
+
+    async function loadUploads() {
+      try {
+        const res = await fetch(`/api/uploads/recent?token=${token}`)
+        if (!res.ok) return
+        renderUploads(await res.json())
+      } catch (e) {}
+    }
+
+    function startUploadsPolling() {
+      loadUploads()
+      if (uploadsTimer) clearInterval(uploadsTimer)
+      uploadsTimer = setInterval(loadUploads, 4000)
+    }
+
+    function stopUploadsPolling() {
+      if (uploadsTimer) clearInterval(uploadsTimer)
+      uploadsTimer = null
+    }
+
+    async function uploadFile(file) {
+      sendStatusEl.textContent = `กำลังส่ง "${file.name}"...`
+      sendStatusEl.className = 'status'
+      try {
+        const form = new FormData()
+        form.append('file', file)
+        const res = await fetch(`/api/upload?token=${token}`, { method: 'POST', body: form })
+        if (!res.ok) throw new Error((await res.json()).error || 'ส่งไฟล์ไม่สำเร็จ')
+        sendStatusEl.textContent = `✓ ส่งแล้ว "${file.name}"`
+        loadUploads()
+      } catch (e) {
+        sendStatusEl.textContent = e.message
+        sendStatusEl.className = 'status error'
+      } finally {
+        fileInputEl.value = ''
+      }
+    }
+
+    fileInputEl.addEventListener('change', () => {
+      if (fileInputEl.files[0]) uploadFile(fileInputEl.files[0])
+    })
+
+    const clipInputEl = document.getElementById('clipInput')
+    const clipSendBtnEl = document.getElementById('clipSendBtn')
+    const clipPullBtnEl = document.getElementById('clipPullBtn')
+    const clipResultEl = document.getElementById('clipResult')
+    const clipResultTextEl = document.getElementById('clipResultText')
+    const clipCopyBtnEl = document.getElementById('clipCopyBtn')
+
+    clipSendBtnEl.addEventListener('click', async () => {
+      const text = clipInputEl.value
+      if (!text.trim()) return
+      clipSendBtnEl.textContent = 'กำลังส่ง...'
+      clipSendBtnEl.disabled = true
+      try {
+        const res = await fetch(`/api/clipboard?token=${token}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        })
+        if (!res.ok) throw new Error((await res.json()).error || 'ส่งไม่สำเร็จ')
+        sendStatusEl.textContent = '✓ ส่งเข้า clipboard คอมแล้ว'
+        sendStatusEl.className = 'status'
+        clipInputEl.value = ''
+      } catch (e) {
+        sendStatusEl.textContent = e.message
+        sendStatusEl.className = 'status error'
+      } finally {
+        clipSendBtnEl.textContent = 'ส่งไป PC'
+        clipSendBtnEl.disabled = false
+      }
+    })
+
+    clipPullBtnEl.addEventListener('click', async () => {
+      clipPullBtnEl.textContent = 'กำลังดึง...'
+      clipPullBtnEl.disabled = true
+      try {
+        const res = await fetch(`/api/clipboard?token=${token}`)
+        if (!res.ok) throw new Error((await res.json()).error || 'ดึงไม่สำเร็จ')
+        const data = await res.json()
+        clipResultTextEl.textContent = data.text || '(ว่างเปล่า)'
+        clipResultEl.style.display = 'flex'
+      } catch (e) {
+        sendStatusEl.textContent = e.message
+        sendStatusEl.className = 'status error'
+      } finally {
+        clipPullBtnEl.textContent = 'ดึงจาก PC'
+        clipPullBtnEl.disabled = false
+      }
+    })
+
+    const filesStatusEl = document.getElementById('filesStatus')
+    const fileRootsEl = document.getElementById('fileRoots')
+    const fileBreadcrumbEl = document.getElementById('fileBreadcrumb')
+    const fileListEl = document.getElementById('fileList')
+    let fileRootsData = []
+    let currentRoot = null
+    let currentSub = ''
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+    }
+
+    function fmtSize(bytes) {
+      if (bytes < 1024) return `${bytes} B`
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+      if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+      return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+    }
+
+    function renderBreadcrumb() {
+      const rootInfo = fileRootsData.find((r) => r.id === currentRoot)
+      const parts = currentSub ? currentSub.split('/').filter(Boolean) : []
+      let html = `<span class="crumb" data-idx="-1">${rootInfo ? `${rootInfo.icon} ${rootInfo.label}` : ''}</span>`
+      parts.forEach((p, i) => { html += `<span class="sep">/</span><span class="crumb" data-idx="${i}">${escapeHtml(p)}</span>` })
+      fileBreadcrumbEl.innerHTML = html
+      fileBreadcrumbEl.querySelectorAll('.crumb').forEach((el) => {
+        el.onclick = () => {
+          const idx = Number(el.dataset.idx)
+          currentSub = idx === -1 ? '' : parts.slice(0, idx + 1).join('/')
+          loadFileList()
+        }
+      })
+    }
+
+    function renderFileList(items) {
+      if (!items.length) {
+        fileListEl.innerHTML = `<div class="file-row"><span class="f-name" style="color:var(--text-dim)">โฟลเดอร์ว่างเปล่า</span></div>`
+        return
+      }
+      fileListEl.innerHTML = items.map((it) => {
+        if (it.isDir) {
+          return `<div class="file-row" data-name="${escapeHtml(it.name)}"><span class="f-icon">📁</span><span class="f-name">${escapeHtml(it.name)}</span></div>`
+        }
+        const sub = (currentSub ? `${currentSub}/` : '') + it.name
+        const href = `/api/files/download?token=${token}&root=${currentRoot}&sub=${encodeURIComponent(sub)}`
+        return `<a class="file-row" href="${href}" download><span class="f-icon">📄</span><span class="f-name">${escapeHtml(it.name)}</span><span class="f-meta">${fmtSize(it.size)}</span></a>`
+      }).join('')
+      fileListEl.querySelectorAll('.file-row[data-name]').forEach((row) => {
+        row.onclick = () => {
+          currentSub = currentSub ? `${currentSub}/${row.dataset.name}` : row.dataset.name
+          loadFileList()
+        }
+      })
+    }
+
+    async function loadFileList() {
+      renderBreadcrumb()
+      filesStatusEl.textContent = ''
+      try {
+        const res = await fetch(`/api/files/list?token=${token}&root=${currentRoot}&sub=${encodeURIComponent(currentSub)}`)
+        if (!res.ok) throw new Error((await res.json()).error || 'โหลดไม่สำเร็จ')
+        renderFileList(await res.json())
+      } catch (e) {
+        filesStatusEl.textContent = e.message
+        filesStatusEl.className = 'status error'
+      }
+    }
+
+    function openRoot(rootId) {
+      currentRoot = rootId
+      currentSub = ''
+      fileRootsEl.querySelectorAll('.file-root-btn').forEach((b) => b.classList.toggle('active', b.dataset.root === rootId))
+      loadFileList()
+    }
+
+    // ===== Settings: Apps =====
+    const appsListEl = document.getElementById('appsList')
+    const appFormEl = document.getElementById('appForm')
+    const addAppBtnEl = document.getElementById('addAppBtn')
+    const appLabelEl = document.getElementById('appLabel')
+    const appIconEl = document.getElementById('appIcon')
+    const appPathEl = document.getElementById('appPath')
+    const appProcessEl = document.getElementById('appProcess')
+    const appSaveBtnEl = document.getElementById('appSaveBtn')
+    const appCancelBtnEl = document.getElementById('appCancelBtn')
+    const settingsStatusEl = document.getElementById('settingsStatus')
+    let editingAppId = null
+    let settingsAppsCache = []
+
+    function showAppForm(editApp) {
+      editingAppId = editApp ? editApp.id : null
+      appLabelEl.value = editApp ? editApp.label : ''
+      appIconEl.value = editApp ? (editApp.icon || '') : ''
+      appPathEl.value = editApp ? editApp.path : ''
+      appProcessEl.value = editApp ? (editApp.process || '') : ''
+      appFormEl.style.display = 'flex'
+      appLabelEl.focus()
+    }
+
+    function hideAppForm() {
+      appFormEl.style.display = 'none'
+      editingAppId = null
+    }
+
+    async function loadSettingsApps() {
+      try {
+        const res = await fetch(`/api/apps?token=${token}`)
+        settingsAppsCache = await res.json()
+        renderAppsList()
+      } catch (e) {}
+    }
+
+    function renderAppsList() {
+      if (!settingsAppsCache.length) {
+        appsListEl.innerHTML = `<div class="settings-empty">No apps yet — add your first one below.</div>`
+        return
+      }
+      appsListEl.innerHTML = settingsAppsCache.map((a) => `
+        <div class="settings-item">
+          <span class="icon">${a.icon}</span>
+          <span class="label">${a.label}</span>
+          <button data-edit="${a.id}">Edit</button>
+          <button data-del="${a.id}">Delete</button>
+        </div>
+      `).join('')
+      appsListEl.querySelectorAll('[data-edit]').forEach((btn) => {
+        btn.onclick = async () => {
+          const res = await fetch(`/api/apps/${btn.dataset.edit}?token=${token}`)
+          showAppForm(await res.json())
+        }
+      })
+      appsListEl.querySelectorAll('[data-del]').forEach((btn) => {
+        btn.onclick = async () => {
+          if (!confirm('Delete this app?')) return
+          await fetch(`/api/apps/${btn.dataset.del}?token=${token}`, { method: 'DELETE' })
+          loadSettingsApps()
+        }
+      })
+    }
+
+    addAppBtnEl.addEventListener('click', () => showAppForm(null))
+    appCancelBtnEl.addEventListener('click', hideAppForm)
+    appSaveBtnEl.addEventListener('click', async () => {
+      const body = {
+        label: appLabelEl.value.trim(),
+        icon: appIconEl.value.trim(),
+        path: appPathEl.value.trim(),
+        process: appProcessEl.value.trim(),
+      }
+      if (!body.label || !body.path) {
+        settingsStatusEl.textContent = 'Name and path are required'
+        settingsStatusEl.className = 'status error'
+        return
+      }
+      const url = editingAppId ? `/api/apps/${editingAppId}?token=${token}` : `/api/apps?token=${token}`
+      const method = editingAppId ? 'PUT' : 'POST'
+      try {
+        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        if (!res.ok) throw new Error((await res.json()).error || 'save failed')
+        settingsStatusEl.textContent = '✓ Saved'
+        settingsStatusEl.className = 'status'
+        hideAppForm()
+        loadSettingsApps()
+        load()
+      } catch (e) {
+        settingsStatusEl.textContent = e.message
+        settingsStatusEl.className = 'status error'
+      }
+    })
+
+    // ===== Settings: Scenes =====
+    const scenesListEl = document.getElementById('scenesList')
+    const sceneFormEl = document.getElementById('sceneForm')
+    const addSceneBtnEl = document.getElementById('addSceneBtn')
+    const sceneLabelEl = document.getElementById('sceneLabel')
+    const sceneIconEl = document.getElementById('sceneIcon')
+    const sceneAppChecksEl = document.getElementById('sceneAppChecks')
+    const sceneControlChecksEl = document.getElementById('sceneControlChecks')
+    const sceneSaveBtnEl = document.getElementById('sceneSaveBtn')
+    const sceneCancelBtnEl = document.getElementById('sceneCancelBtn')
+    let editingSceneId = null
+    let settingsScenesCache = []
+
+    function renderSceneCheckboxes(existingSteps) {
+      const steps = existingSteps || []
+      const runIds = steps.filter((s) => s.type === 'run').map((s) => s.id)
+      const controlIds = steps.filter((s) => s.type === 'control').map((s) => s.id)
+      sceneAppChecksEl.innerHTML = settingsAppsCache.map((a) => `
+        <label class="chk"><input type="checkbox" value="${a.id}" ${runIds.includes(a.id) ? 'checked' : ''}/> ${a.icon} ${a.label}</label>
+      `).join('') || `<div class="settings-empty">Add an app first</div>`
+      sceneControlChecksEl.innerHTML = CONTROLS.map((c) => `
+        <label class="chk"><input type="checkbox" value="${c.id}" ${controlIds.includes(c.id) ? 'checked' : ''}/> ${c.icon} ${c.label}</label>
+      `).join('')
+    }
+
+    function showSceneForm(editScene) {
+      editingSceneId = editScene ? editScene.id : null
+      sceneLabelEl.value = editScene ? editScene.label : ''
+      sceneIconEl.value = editScene ? (editScene.icon || '') : ''
+      renderSceneCheckboxes(editScene ? editScene.steps : [])
+      sceneFormEl.style.display = 'flex'
+      sceneLabelEl.focus()
+    }
+
+    function hideSceneForm() {
+      sceneFormEl.style.display = 'none'
+      editingSceneId = null
+    }
+
+    async function loadSettingsScenes() {
+      try {
+        const res = await fetch(`/api/scenes?token=${token}`)
+        settingsScenesCache = await res.json()
+        renderScenesList()
+      } catch (e) {}
+    }
+
+    function renderScenesList() {
+      if (!settingsScenesCache.length) {
+        scenesListEl.innerHTML = `<div class="settings-empty">No scenes yet — add your first one below.</div>`
+        return
+      }
+      scenesListEl.innerHTML = settingsScenesCache.map((s) => `
+        <div class="settings-item">
+          <span class="icon">${s.icon}</span>
+          <span class="label">${s.label}</span>
+          <button data-edit="${s.id}">Edit</button>
+          <button data-del="${s.id}">Delete</button>
+        </div>
+      `).join('')
+      scenesListEl.querySelectorAll('[data-edit]').forEach((btn) => {
+        btn.onclick = async () => {
+          const res = await fetch(`/api/scenes/${btn.dataset.edit}?token=${token}`)
+          showSceneForm(await res.json())
+        }
+      })
+      scenesListEl.querySelectorAll('[data-del]').forEach((btn) => {
+        btn.onclick = async () => {
+          if (!confirm('Delete this scene?')) return
+          await fetch(`/api/scenes/${btn.dataset.del}?token=${token}`, { method: 'DELETE' })
+          loadSettingsScenes()
+          loadScenes()
+        }
+      })
+    }
+
+    addSceneBtnEl.addEventListener('click', () => showSceneForm(null))
+    sceneCancelBtnEl.addEventListener('click', hideSceneForm)
+    sceneSaveBtnEl.addEventListener('click', async () => {
+      const label = sceneLabelEl.value.trim()
+      const icon = sceneIconEl.value.trim()
+      const steps = [
+        ...[...sceneAppChecksEl.querySelectorAll('input:checked')].map((i) => ({ type: 'run', id: i.value })),
+        ...[...sceneControlChecksEl.querySelectorAll('input:checked')].map((i) => ({ type: 'control', id: i.value })),
+      ]
+      if (!label || !steps.length) {
+        settingsStatusEl.textContent = 'Name and at least 1 step required'
+        settingsStatusEl.className = 'status error'
+        return
+      }
+      const url = editingSceneId ? `/api/scenes/${editingSceneId}?token=${token}` : `/api/scenes?token=${token}`
+      const method = editingSceneId ? 'PUT' : 'POST'
+      try {
+        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label, icon, steps }) })
+        if (!res.ok) throw new Error((await res.json()).error || 'save failed')
+        settingsStatusEl.textContent = '✓ Saved'
+        settingsStatusEl.className = 'status'
+        hideSceneForm()
+        loadSettingsScenes()
+        loadScenes()
+      } catch (e) {
+        settingsStatusEl.textContent = e.message
+        settingsStatusEl.className = 'status error'
+      }
+    })
+
+    async function loadFileRoots() {
+      try {
+        const res = await fetch(`/api/files/roots?token=${token}`)
+        fileRootsData = await res.json()
+        fileRootsEl.innerHTML = fileRootsData.map((r) => `<button class="file-root-btn" data-root="${r.id}">${r.icon} ${r.label}</button>`).join('')
+        fileRootsEl.querySelectorAll('.file-root-btn').forEach((btn) => {
+          btn.onclick = () => openRoot(btn.dataset.root)
+        })
+        if (fileRootsData.length && !currentRoot) openRoot(fileRootsData[0].id)
+      } catch (e) {
+        filesStatusEl.textContent = 'โหลดรายการโฟลเดอร์ไม่สำเร็จ'
+        filesStatusEl.className = 'status error'
+      }
+    }
+
+    clipCopyBtnEl.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(clipResultTextEl.textContent)
+        clipCopyBtnEl.textContent = '✓ คัดลอกแล้ว'
+        setTimeout(() => { clipCopyBtnEl.textContent = 'คัดลอกไปมือถือ' }, 1500)
+      } catch (e) {
+        sendStatusEl.textContent = 'คัดลอกไม่สำเร็จ — ลองแตะค้างที่ข้อความแทน'
+        sendStatusEl.className = 'status error'
+      }
+    })
+
+    pagerEl.addEventListener('scroll', () => {
+      const page = Math.round(pagerEl.scrollLeft / pagerEl.clientWidth)
+      dots.forEach((d, i) => d.classList.toggle('active', i === page))
+      if (page === 0) startHomePolling()
+      else stopHomePolling()
+      if (page === 1) startAppStatusPolling()
+      else stopAppStatusPolling()
+      if (page === 3) startUploadsPolling()
+      else stopUploadsPolling()
+      if (page === 4 && currentRoot) loadFileList()
+    })
+
+    renderControls()
+    loadScenes()
+    renderHomeQuickActions()
+    load()
+    startHomePolling()
+    loadFileRoots()
+    loadSettingsApps()
+    loadSettingsScenes()
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        load()
+        const page = Math.round(pagerEl.scrollLeft / pagerEl.clientWidth)
+        if (page === 0) startHomePolling()
+        if (page === 1) startAppStatusPolling()
+        if (page === 3) startUploadsPolling()
+      } else {
+        stopHomePolling()
+        stopAppStatusPolling()
+        stopUploadsPolling()
+      }
+    })
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {})
+    }
+  </script>
+</body>
+</html>

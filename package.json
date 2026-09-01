@@ -1,0 +1,14 @@
+{
+  "name": "self-hosted-atlas",
+  "version": "0.1.0",
+  "description": "Self-hosted phone-to-PC remote control hub — app launcher, system monitor, media/clipboard/file bridge, no cloud required.",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^2.3.0"
+  }
+}
